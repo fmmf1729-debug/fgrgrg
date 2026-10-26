@@ -1,0 +1,24 @@
+{
+  "commands": {
+    "рабочая": {
+      "steps": [
+        {
+          "kind": "action",
+          "id": "explorer_open",
+          "text": "открой проводник"
+        },
+        {
+          "kind": "action",
+          "id": "vol_set",
+          "text": "поставь громкость 20"
+        },
+        {
+          "kind": "wait",
+          "sec": 1
+        }
+      ],
+      "synonyms": []
+    }
+  },
+  "scenarios": {}
+}

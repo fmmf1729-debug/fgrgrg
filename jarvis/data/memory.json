@@ -1,0 +1,54 @@
+{
+  "facts": {
+    "имя пользователя": "артём"
+  },
+  "preferences": {},
+  "corrections": {},
+  "command_stats": {
+    "sys_status": {
+      "count": 1,
+      "last": "2026-10-26 14:58:10"
+    },
+    "downloads": {
+      "count": 2,
+      "last": "2026-10-26 14:58:10"
+    },
+    "vol_up": {
+      "count": 1,
+      "last": "2026-10-26 14:58:10"
+    },
+    "vol_set": {
+      "count": 2,
+      "last": "2026-10-26 14:58:10"
+    },
+    "win_min": {
+      "count": 2,
+      "last": "2026-10-26 14:58:10"
+    },
+    "explorer_open": {
+      "count": 1,
+      "last": "2026-10-26 14:58:10"
+    },
+    "cmd:рабочая": {
+      "count": 1,
+      "last": "2026-10-26 14:58:12"
+    },
+    "shutdown_pc": {
+      "count": 1,
+      "last": "2026-10-26 14:58:12"
+    },
+    "cancel_shutdown": {
+      "count": 1,
+      "last": "2026-10-26 14:58:12"
+    },
+    "search_youtube": {
+      "count": 1,
+      "last": "2026-10-26 14:58:12"
+    },
+    "lock": {
+      "count": 1,
+      "last": "2026-10-26 14:58:12"
+    }
+  },
+  "updated": "2026-10-26 14:58:12"
+}
