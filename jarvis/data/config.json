@@ -18,6 +18,21 @@
         }
       ],
       "synonyms": []
+    },
+    "вечер": {
+      "steps": [
+        {
+          "kind": "action",
+          "id": "bright_down",
+          "text": "убавь яркость"
+        },
+        {
+          "kind": "action",
+          "id": "vol_set",
+          "text": "поставь громкость 20"
+        }
+      ],
+      "synonyms": []
     }
   },
   "scenarios": {}

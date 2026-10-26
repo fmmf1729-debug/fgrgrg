@@ -156,14 +156,10 @@ class Assistant:
         engine_reply, engine_name = self.brain.ask(raw, history=self.memory.recent_history(14))
         self.emit("ai_reply", engine=engine_name, text=engine_reply)
         reply = self.say(engine_reply)
-        # 9) автообучение: если пользователь пересказывает известную команду своими словами —
-        # предлагаем сохранить формулировку как синоним (один раз, тихо)
-        if self.settings.get("auto_learn", True):
-            loose = self.matcher.match(t)
-            if loose and not any(w in t for w in ("почему", "зачем", "как ", "что ", "кто ")):
-                key = loose[0]
-                if len(t.split()) >= 2 and norm(t) not in self.matcher.exact:
-                    self.matcher.add_synonym(key, t)
+        # примечание: тихое автообучение синонимам здесь отключено намеренно —
+        # оно перехватывало обычные реплики диалога и превращало их в команды.
+        # Явное обучение работает выше: «научи ...», «запомни ... = ...»,
+        # «нет, я имел в виду ...», а также кнопки интерфейса и голосовое создание команд.
         return reply
 
     # ── исполнение системного действия ──

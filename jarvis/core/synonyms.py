@@ -284,31 +284,78 @@ class CommandMatcher:
         return sorted(set(list(self.default.keys()) + list(self.synonyms.keys())))
 
     # ── обучение голосом: «научи команду громче говорить сильнее звук» ──
+    # Разделители: «=», «—», «это», «означает», «как», «говорить», «произносить», «произносится как».
+    _LEARN_SEP = r"(?:=|—|-| это | означает | как | говорить | произносить | произносится как )"
+    # варианты слов «команда/фраза/синоним» в любом падеже перед названием команды
+    _LEARN_NOUN = r"(?:(?:команду|команды|команда|фразу|фразы|фраза|синониму|синонимом|синоним)\s+)?"
     LEARN_RE = re.compile(
-        r"^(?:научи|запомни|добавь синоним|выучи)(?: команду| фразу)?\s+«?(?P<cmd>.+?)»?\s*"
-        r"(?:= |говорить |произносить |это |означает |как )+(?P<syn>.+)$")
+        r"^(?:научи(?: меня)?|запомни(?: нас)?|добавь(?: мой)?|выучи)"
+        r"\s+" + _LEARN_NOUN + r"(?!что )«?(?P<cmd>.+?)»?\s*" + _LEARN_SEP + r"+(?P<syn>.+)$")
+
+    # обратный порядок: «добавь синоним шепчи к команде тише»
+    LEARN_REV_RE = re.compile(
+        r"^(?:добавь|научи|выучи)(?: меня)?\s+синоним(?:ом)?\s+«?(?P<syn>.+?)»?\s+"
+        r"(?:к|для)\s+(?:команду|команды|команда|фразу|фраза)?\s*«?(?P<cmd>.+?)»?\s*$")
+
+    def label_of(self, key):
+        """Человеческая метка действия для ответов («Громче» вместо vol_up)."""
+        try:
+            from .actions import ACTIONS
+            if key in ACTIONS:
+                return ACTIONS[key][0]
+        except Exception:
+            pass
+        return key
 
     def try_learn(self, text):
         t = norm(text)
+        m2 = self.LEARN_REV_RE.match(t)
         m = self.LEARN_RE.match(t)
-        if not m:
+        # если обе формы матчатся — берём ту, где часть команды распознаётся
+        cmd_part = syn = None
+        for mo, rev in ((m2, True), (m, False)):
+            if not mo:
+                continue
+            c = re.sub(r"(?:^|\s)(?:команду|команда|фразу|фраза|синонимом|синоним)\s+", " ",
+                       norm(mo.group("cmd"))).strip()
+            s = mo.group("syn").strip(" «»\"'")
+            if rev and (self.find_key_by_label_or_id(c) or self.fuzzy_key(c)):
+                cmd_part, syn = c, s
+                break
+            if not rev:
+                cmd_part, syn = c, s
+                break
+            if cmd_part is None:
+                cmd_part, syn = c, s
+        if cmd_part is None:
             return None
-        cmd_part = norm(m.group("cmd"))
-        syn = m.group("syn").strip(" «»\"'")
+        cmd_part = re.sub(r"(?:^|\s)(?:команду|команда|фразу|фраза|синонимом|синоним)\s+", " ", cmd_part).strip()
         key = self.find_key_by_label_or_id(cmd_part)
         if not key:
             key = self.fuzzy_key(cmd_part)
         if not key:
             return {"ok": False, "msg": f"Не знаю команду «{cmd_part}». Скажите список команд."}
         self.add_synonym(key, syn)
-        label = key
+        label = self.label_of(key)
         return {"ok": True, "key": key, "syn": syn,
-                "msg": f"Выучил: «{syn}» теперь означает команду {label}."}
+                "msg": f"Выучил: «{syn}» теперь означает команду «{label}»."}
 
     def find_key_by_label_or_id(self, text):
+        """Ищет команду по id («vol_up») или по человеческой метке/синониму («громче»)."""
         t = norm(text)
         if t in self.default:
             return t
+        # точное совпадение с синонимом любой команды — пользователь называет команду её же фразой
+        if t in self.exact:
+            return self.exact[t]
+        # совпадение с меткой действия («Громче» → vol_up)
+        try:
+            from .actions import ACTIONS
+            for k, v in ACTIONS.items():
+                if norm(v[0]) == t:
+                    return k
+        except Exception:
+            pass
         for k in self.all_keys():
             if norm(k) == t:
                 return k
@@ -322,10 +369,12 @@ class CommandMatcher:
         return match if score >= 80 else None
 
     # ── распознавание ──
-    def match(self, text):
+    def match(self, text, conservative=False):
         """Возвращает (key, payload_text) или None.
         Точное совпадение — всегда выигрывает; частичное/фuzzy — только если фраза длиннее 2 слов
-        и не является короткой системной командой (иначе «да», «нет», «ю туб» ломали бы диалог)."""
+        и не является короткой системной командой (иначе «да», «нет», «ю туб» ломали бы диалог).
+        conservative=True — строгий режим для основного цикла ассистента: отключает fuzzy-подстановку,
+        чтобы обычный диалог с ИИ никогда не превращался в случайно выполненную команду."""
         t = norm(text)
         if not t:
             return None
@@ -363,8 +412,8 @@ class CommandMatcher:
             m = pattern.search(t)
             if m:
                 return (key, t)
-        # 6. fuzzy — последний шанс (только для развёрнутых фраз)
-        if _fuzz_process and self.exact and len(words) >= 3:
+        # 6. fuzzy — последний шанс (только для развёрнутых фраз, не в строгом режиме)
+        if not conservative and _fuzz_process and self.exact and len(words) >= 3:
             match, score = _fuzz_process.extractOne(t, list(self.exact.keys()))
             if score >= 88:
                 return (self.exact[match], t)
